@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>Pro Hand Data Explorer</title>
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Segoe UI', Tahoma, sans-serif;
+            background: #121212;
+            color: #e0e0e0;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        #nav-bar {
+            background: #1f1f1f;
+            padding: 10px 25px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            border-bottom: 2px solid #333;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+            z-index: 10;
+        }
+
+        #view-container {
+            flex-grow: 1;
+            background: white;
+            position: relative;
+        }
+
+        /* High-speed canvas buffer system */
+        iframe {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            visibility: hidden;
+        }
+
+        iframe.visible-pane {
+            visibility: visible;
+            z-index: 5;
+        }
+
+        .timer-display {
+            text-align: center;
+            font-family: 'Courier New', monospace;
+        }
+
+        .timer-display h2 {
+            margin: 0;
+            color: #00ff88;
+            font-size: 1.8em;
+            letter-spacing: 2px;
+        }
+
+        .timer-display p {
+            margin: 2px 0 0 0;
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        .btn-group button {
+            background: #333;
+            color: white;
+            border: 1px solid #444;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: 0.2s;
+            font-weight: bold;
+            font-size: 14px;
+        }
+
+        .btn-group button:hover {
+            background: #00ff88;
+            color: #000;
+            border-color: #00ff88;
+        }
+
+        kbd {
+            background: #333;
+            border: 1px solid #555;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-size: 0.9em;
+            color: #00ff88;
+        }
+    </style>
+</head>
+
+<body>
+
+    <div id="nav-bar">
+        <div class="btn-group">
+            <button onclick="changeFrame(-1)">◀ PREV</button>
+            <button onclick="changeFrame(1)">NEXT ▶</button>
+        </div>
+
+        <div class="timer-display">
+            <h2 id="timer-text">DATA CLEANING HUD</h2>
+            <p id="meta-text">Loading Workspace...</p>
+        </div>
+
+        <div style="text-align: right; line-height: 1.4;">
+            <span style="font-size: 0.8em; color: #666;">CONTROLS</span><br>
+            <kbd>←</kbd> <kbd>→</kbd> Navigate<br>
+            <span style="font-size: 0.8em; color: #666;">Rotate 3D with Mouse</span>
+        </div>
+    </div>
+
+    <div id="view-container">
+        <iframe id="iframe-1" class="visible-pane" src="hand_plots_html/frame_0000.html"></iframe>
+        <iframe id="iframe-2" src=""></iframe>
+    </div>
+
+    <script src="hand_plots_html/timestamps.js"></script>
+
+    <script>
+        let currentIndex = 0;
+        const startRow = 3;         // First data row in Excel
+        
+        // REMOVED HARCODED NUMBER: Fallback to 0, but calculated dynamically on window load!
+        let totalFrames = 0;   
+
+        let currentPane = 1;
+        let isThrottled = false;
+        const THROTTLE_MS = 50; 
+
+        const metaText = document.getElementById('meta-text');
+
+        function update() {
+            const padded = currentIndex.toString().padStart(4, '0');
+            const targetUrl = `hand_plots_html/frame_${padded}.html`;
+
+            const activeIframe = document.getElementById(`iframe-${currentPane}`);
+            const nextPane = currentPane === 1 ? 2 : 1;
+            const hiddenIframe = document.getElementById(`iframe-${nextPane}`);
+
+            // Load the frame on the hidden background layer first
+            hiddenIframe.src = targetUrl;
+
+            // The moment it loads, instantly flip the visibility switch
+            hiddenIframe.onload = function() {
+                hiddenIframe.className = "visible-pane";
+                activeIframe.className = "";
+                currentPane = nextPane;
+            };
+
+            let rawTimeStamp = "N/A";
+            if (typeof TIMESTAMPS !== 'undefined' && TIMESTAMPS[currentIndex]) {
+                rawTimeStamp = TIMESTAMPS[currentIndex];
+            }
+
+            metaText.innerText = `Excel Row: ${currentIndex + startRow} | Frame: ${currentIndex} / ${totalFrames} | TimeStamp: ${rawTimeStamp}`;
+        }
+
+        function changeFrame(dir) {
+            currentIndex += dir;
+            if (currentIndex < 0) currentIndex = 0;
+            if (currentIndex > totalFrames) currentIndex = totalFrames;
+            update();
+        }
+
+        // Controlled keyboard loop checks if browser can handle input speed
+        document.addEventListener('keydown', (e) => {
+            if (e.key === "ArrowRight") {
+                e.preventDefault();
+                if (isThrottled) return;
+                
+                changeFrame(1);
+                
+                isThrottled = true;
+                setTimeout(() => { isThrottled = false; }, THROTTLE_MS);
+            }
+            if (e.key === "ArrowLeft") {
+                e.preventDefault();
+                if (isThrottled) return;
+                
+                changeFrame(-1);
+                
+                isThrottled = true;
+                setTimeout(() => { isThrottled = false; }, THROTTLE_MS);
+            }
+        });
+
+        window.onload = function () {
+            // DYNAMIC UPDATE: Read length straight out of your timestamps file layout
+            if (typeof TIMESTAMPS !== 'undefined' && TIMESTAMPS.length > 0) {
+                totalFrames = TIMESTAMPS.length - 1;
+            } else {
+                totalFrames = 0; // fallback if file missing
+            }
+            update();
+        }
+    </script>
+
+</body>
+
+</html>
