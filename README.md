@@ -1,7 +1,7 @@
 # TimeSeries_GuestureRecognition_WindData
 machine learning classification problem for gesture recognition on time series data
 
-## Certain keep in mind for data clearning
+## Certain keep in mind for data cleaning
 
 The data that was obtained has each Participant's guestures and the referants that they performed, all in a single csv file. 
 
