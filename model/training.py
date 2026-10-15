@@ -114,7 +114,6 @@ if __name__ == "__main__":
     print("--- PIPELINE DATA INITIALIZATION ---")
     print(f"Checking target directory: {data_pipeline.data_root.resolve()}")
     
-    # FIXED: Changed to recursive look for checking file list
     all_files = list(data_pipeline.data_root.glob("**/*.csv"))
     print(f"Total CSV files found across all subfolders: {len(all_files)}")
     
